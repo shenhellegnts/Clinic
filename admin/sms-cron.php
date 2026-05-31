@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/../db.php';
-require_once __DIR__ . '/../includes/semaphore.php';
+require_once __DIR__ . '/../includes/sms.php';
 
 $today   = date('Y-m-d');
 $message = '';

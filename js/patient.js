@@ -1,11 +1,16 @@
-/* ============================================================
-   M.V. Masangkay Clinic — Patient Portal JS
-   patient.js  (Glassmorphic UI — Full System Update)
-   ============================================================ */
-
 'use strict';
 
-/* ─── State ─── */
+function formatMobileInput(el) {
+  let digits = el.value.replace(/\D/g, '');
+  if (digits.startsWith('63')) digits = digits.slice(2);
+  if (digits.startsWith('0'))  digits = digits.slice(1);
+  digits = digits.slice(0, 10);
+  let formatted = digits;
+  if (digits.length > 6)      formatted = digits.slice(0,3) + ' ' + digits.slice(3,6) + ' ' + digits.slice(6);
+  else if (digits.length > 3) formatted = digits.slice(0,3) + ' ' + digits.slice(3);
+  el.value = formatted;
+}
+
 const state = {
   mobile: '',
   otpSent: false,
@@ -17,15 +22,12 @@ const state = {
   queueNum: null,
   currentStep: 0,
   bookingForOther: false,
-  existingPatients: [],        /* profiles fetched from DB for this mobile */
-  selectedExistingPatient: null, /* the patient object chosen in the modal */
+  existingPatients: [],
+  selectedExistingPatient: null,
 };
 
 let statusPollInterval = null;
 
-/* ══════════════════════════════════════════
-   NAVIGATION
-══════════════════════════════════════════ */
 function goPatientStep(n) {
   document.querySelectorAll('.patient-screen').forEach((s, i) => {
     s.classList.toggle('active', i === n);
@@ -35,7 +37,6 @@ function goPatientStep(n) {
   if (n === 5) updateSummary();
   if (n === 6) restoreQueueState();
   if (n === 7) loadPatientHistory();
-  /* Reset the "booking for another person" checkbox when returning to step 1 */
   if (n === 1) {
     const cb    = document.getElementById('booking-for-other-check');
     const label = document.getElementById('another-booking-row');
@@ -44,9 +45,6 @@ function goPatientStep(n) {
   }
 }
 
-/* ══════════════════════════════════════════
-   DROPDOWN
-══════════════════════════════════════════ */
 function toggleDropdown() {
   const menu     = document.getElementById('dropdown-menu');
   const backdrop = document.getElementById('dd-backdrop');
@@ -64,9 +62,6 @@ function closeDropdown() {
   document.getElementById('dd-backdrop').style.display = 'none';
 }
 
-/* ══════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════ */
 function showToast(msg, type = 'default', duration = 3500) {
   const container = document.getElementById('toast-container');
   const toast     = document.createElement('div');
@@ -88,14 +83,11 @@ function showToast(msg, type = 'default', duration = 3500) {
   }, duration);
 }
 
-/* ══════════════════════════════════════════
-   OTP FLOW
-══════════════════════════════════════════ */
 function sendOTP() {
   const input  = document.getElementById('mobile-input');
   const mobile = input.value.replace(/\D/g, '');
-  if (mobile.length < 10) {
-    showToast('Please enter a valid 10-digit mobile number.', 'error');
+  if (mobile.length !== 10 || !mobile.startsWith('9')) {
+    showToast('Enter a valid PH mobile number starting with 9 (e.g. 9XX XXX XXXX).', 'error');
     input.focus();
     return;
   }
@@ -161,7 +153,6 @@ function verifyOTP() {
       boxes.forEach(b => b.classList.remove('error'));
       showToast('Verified! Welcome.', 'success');
 
-      /* Fetch existing patient profiles for this mobile, then open modal */
       fetch('get-patients-by-mobile.php?mobile=' + encodeURIComponent(state.mobile))
         .then(r => r.json())
         .then(d => {
@@ -179,10 +170,6 @@ function verifyOTP() {
     });
 }
 
-/* ══════════════════════════════════════════
-   PATIENT SELECTION MODAL
-══════════════════════════════════════════ */
-/* Toggle "booking for another person" — handles click on the whole label row */
 function toggleBookingForOtherClick(label) {
   const cb = document.getElementById('booking-for-other-check');
   if (!cb) return;
@@ -198,15 +185,12 @@ function toggleBookingForOther(checkbox) {
 
 function openPatientSelectModal() {
   buildPatientList();
-
-  /* Update modal subtitle based on bookingForOther flag */
   const sub = document.querySelector('#patient-select-modal .modal-sub');
   if (sub) {
     sub.textContent = state.bookingForOther
       ? 'You\'re booking for someone else. Select an existing profile or create a new one.'
       : 'Select an existing profile or create a new one linked to your mobile number.';
   }
-
   document.getElementById('patient-select-modal').classList.add('open');
 }
 
@@ -218,7 +202,6 @@ function buildPatientList() {
   const container = document.getElementById('patient-list-container');
   const patients  = state.existingPatients || [];
 
-  /* ── Existing profiles ── */
   const profileCards = patients.map((p, i) => `
     <div class="patient-card-select ${i === 0 ? 'selected' : ''}"
          id="pcard-${p.id}"
@@ -232,7 +215,6 @@ function buildPatientList() {
       <svg class="patient-card-arrow" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
     </div>`).join('');
 
-  /* ── New profile card (always shown at bottom) ── */
   const newCard = `
     <div class="patient-card-select ${patients.length === 0 ? 'selected' : ''}"
          id="pcard-new"
@@ -284,11 +266,9 @@ function selectPatientAndContinue() {
   const patientId  = selected?.dataset.patientId;
 
   if (patientId && patientId !== 'new') {
-    /* Existing profile selected — prefill the form */
     const patient = state.existingPatients.find(p => String(p.id) === String(patientId));
     state.selectedExistingPatient = patient || null;
   } else {
-    /* New profile — clear everything */
     state.selectedExistingPatient = null;
   }
 
@@ -301,11 +281,10 @@ function selectPatientAndContinue() {
     clearProfileForm();
   }
 
-  resetMedicalHistory(); /* always blank */
+  resetMedicalHistory();
   goPatientStep(3);
 }
 
-/* ── Name parser: "First [Middle] Last[, Suffix]" → parts ── */
 function parseName(fullName) {
   if (!fullName) return { first: '', middle: '', last: '', suffix: '' };
   let suffix = '';
@@ -325,7 +304,6 @@ function parseName(fullName) {
   };
 }
 
-/* ── Prefill profile form from saved patient data ── */
 function prefillPatientProfile(patient) {
   if (!patient) return;
   const { first, middle, last, suffix } = parseName(patient.name);
@@ -339,23 +317,19 @@ function prefillPatientProfile(patient) {
   set('patient-address',     patient.address || '');
   set('patient-company',     patient.company || '');
 
-  /* Suffix dropdown */
   const sxEl = document.getElementById('patient-suffix');
   if (sxEl && suffix) {
     const opt = Array.from(sxEl.options).find(o => o.value === suffix);
     if (opt) sxEl.value = suffix;
   }
 
-  /* Gender dropdown */
   const sexEl = document.getElementById('patient-sex');
   if (sexEl && patient.sex) sexEl.value = patient.sex;
 
-  /* Mobile display */
   const mobEl = document.getElementById('patient-mobile-display');
   if (mobEl) mobEl.value = state.mobile;
 }
 
-/* ── Clear profile form for a brand-new patient ── */
 function clearProfileForm() {
   ['patient-firstname','patient-middlename','patient-lastname',
    'patient-address','patient-company'].forEach(id => {
@@ -365,16 +339,12 @@ function clearProfileForm() {
   const sxEl  = document.getElementById('patient-suffix'); if (sxEl)  sxEl.value = 'None';
   const sexEl = document.getElementById('patient-sex');    if (sexEl) sexEl.value = 'Male';
   const mobEl = document.getElementById('patient-mobile-display'); if (mobEl) mobEl.value = state.mobile;
-  /* Clear priority flags */
   state.priorityFlags = [];
   ['pill-senior','pill-pregnant','pill-pwd'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
 }
 
-/* ══════════════════════════════════════════
-   NAV HEADER UPDATE
-══════════════════════════════════════════ */
 function updateProfileHeader(loggedIn) {
   const avatar      = document.getElementById('profile-avatar-initial');
   const label       = document.getElementById('profile-btn-label');
@@ -404,9 +374,6 @@ function updateProfileHeader(loggedIn) {
   }
 }
 
-/* ══════════════════════════════════════════
-   PRIORITY FLAGS
-══════════════════════════════════════════ */
 function togglePriority(flag) {
   const pill = document.getElementById('pill-' + flag);
   if (!pill) return;
@@ -418,9 +385,6 @@ function togglePriority(flag) {
   }
 }
 
-/* ══════════════════════════════════════════
-   PROFILE STEP
-══════════════════════════════════════════ */
 function saveProfileAndContinue() {
   const first  = document.getElementById('patient-firstname').value.trim();
   const last   = document.getElementById('patient-lastname').value.trim();
@@ -454,9 +418,6 @@ function saveProfileAndContinue() {
   goPatientStep(4);
 }
 
-/* ══════════════════════════════════════════
-   MEDICAL HISTORY
-══════════════════════════════════════════ */
 function resetMedicalHistory() {
   ['med-hereditary','med-hospitalization','med-surgery','med-allergies'].forEach(id => {
     const el = document.getElementById(id);
@@ -498,9 +459,6 @@ function saveMedicalAndContinue() {
   updateSummary();
 }
 
-/* ══════════════════════════════════════════
-   SERVICES
-══════════════════════════════════════════ */
 let basic5On = true;
 
 function toggleService(el) {
@@ -572,9 +530,6 @@ function updateSummary() {
   if (totalEl) totalEl.textContent = '₱' + total.toLocaleString();
 }
 
-/* ══════════════════════════════════════════
-   BOOKING CONFIRMATION MODAL
-══════════════════════════════════════════ */
 function openBookingModal() {
   if (!state.patient) {
     showToast('Please complete your profile first.', 'error');
@@ -609,9 +564,6 @@ function closeBookingModal() {
   document.getElementById('booking-confirm-modal').classList.remove('open');
 }
 
-/* ══════════════════════════════════════════
-   SUBMIT BOOKING
-══════════════════════════════════════════ */
 function submitBookingConfirmed() {
   const btn = document.getElementById('confirm-submit-btn');
   btn.disabled = true;
@@ -648,11 +600,9 @@ function submitBookingConfirmed() {
         return;
       }
 
-      /* Store appointment ID for polling + persist across reloads */
       state.appointmentId = data.appointment_id;
       saveQueueToStorage(data.appointment_id);
 
-      /* Populate pending state fields */
       const pName = document.getElementById('pend-patient-name');
       const pSvc  = document.getElementById('pend-services');
       const pDate = document.getElementById('pend-date');
@@ -660,7 +610,6 @@ function submitBookingConfirmed() {
       if (pSvc)  pSvc.textContent  = data.services || state.selectedServices.join(', ');
       if (pDate) pDate.textContent = data.preferred_date || '—';
 
-      /* Also populate approved-state fields for when approval comes */
       const aPatient = document.getElementById('appt-det-patient');
       const aSvc     = document.getElementById('appt-det-services');
       const aDate    = document.getElementById('appt-det-date');
@@ -671,13 +620,11 @@ function submitBookingConfirmed() {
       const smsDisplay = document.getElementById('sms-phone-display');
       if (smsDisplay) smsDisplay.textContent = state.mobile;
 
-      /* Show step 6 in pending state */
       showQueueState('pending');
       goPatientStep(6);
 
       showToast('Appointment submitted! Awaiting clinic approval.', 'success', 5000);
 
-      /* Start polling every 8 seconds */
       startStatusPolling(data.appointment_id);
     })
     .catch(() => {
@@ -688,9 +635,6 @@ function submitBookingConfirmed() {
     });
 }
 
-/* ══════════════════════════════════════════
-   STATUS POLLING
-══════════════════════════════════════════ */
 function startStatusPolling(appointmentId) {
   if (statusPollInterval) clearInterval(statusPollInterval);
   statusPollInterval = setInterval(() => {
@@ -709,7 +653,7 @@ function startStatusPolling(appointmentId) {
           showToast('Your appointment was not approved. Please contact the clinic.', 'error', 6000);
         }
       })
-      .catch(() => {}); /* Silent — keep polling */
+      .catch(() => {});
   }, 8000);
 }
 
@@ -740,9 +684,6 @@ function showQueueState(state) {
   });
 }
 
-/* ══════════════════════════════════════════
-   CANCEL QUEUE
-══════════════════════════════════════════ */
 function cancelQueue() {
   if (confirm('Are you sure you want to cancel your queue position?')) {
     if (statusPollInterval) { clearInterval(statusPollInterval); statusPollInterval = null; }
@@ -754,12 +695,8 @@ function cancelQueue() {
   }
 }
 
-/* Legacy wrapper */
 function confirmBooking() { openBookingModal(); }
 
-/* ══════════════════════════════════════════
-   QUEUE STATE PERSISTENCE (localStorage)
-══════════════════════════════════════════ */
 function saveQueueToStorage(appointmentId) {
   try {
     localStorage.setItem('clinic_appt_id', appointmentId);
@@ -768,21 +705,18 @@ function saveQueueToStorage(appointmentId) {
 }
 
 function restoreQueueState() {
-  /* Already showing an active queue from this session */
   if (state.appointmentId) return;
 
   const savedId     = localStorage.getItem('clinic_appt_id');
   const savedMobile = localStorage.getItem('clinic_mobile');
   if (!savedId) { showQueueState('pending'); return; }
 
-  /* Restore mobile if we reloaded the page */
   if (!state.mobile && savedMobile) {
     state.mobile = savedMobile;
     const smsDisplay = document.getElementById('sms-phone-display');
     if (smsDisplay) smsDisplay.textContent = savedMobile;
   }
 
-  /* Fetch latest status */
   fetch('check-appointment-status.php?id=' + savedId)
     .then(r => r.json())
     .then(data => {
@@ -793,7 +727,6 @@ function restoreQueueState() {
       } else if (data.status === 'rejected') {
         showQueueState('rejected');
       } else {
-        /* Still pending — repopulate pending state */
         const pSvc  = document.getElementById('pend-services');
         const pDate = document.getElementById('pend-date');
         if (pSvc  && data.services)       pSvc.textContent  = data.services;
@@ -805,9 +738,6 @@ function restoreQueueState() {
     .catch(() => showQueueState('pending'));
 }
 
-/* ══════════════════════════════════════════
-   APPOINTMENT HISTORY (Step 7)
-══════════════════════════════════════════ */
 function loadPatientHistory() {
   const mobile = state.mobile || localStorage.getItem('clinic_mobile');
   if (!mobile) {
@@ -815,7 +745,6 @@ function loadPatientHistory() {
     return;
   }
 
-  /* Show mobile in header */
   const mobileDisplay = document.getElementById('hist-mobile-display');
   if (mobileDisplay) mobileDisplay.textContent = mobile;
 
@@ -890,9 +819,6 @@ function buildHistoryCard(appt) {
   `;
 }
 
-/* ══════════════════════════════════════════
-   OTP BOX AUTO-FOCUS
-══════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   const boxes = document.querySelectorAll('.otp-box');
   boxes.forEach((box, i) => {

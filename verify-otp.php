@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once __DIR__ . '/includes/semaphore.php';
+require_once __DIR__ . '/includes/sms.php';
 
 header('Content-Type: application/json');
 

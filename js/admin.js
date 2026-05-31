@@ -1,17 +1,8 @@
-/* ============================================================
-   M.V. Masangkay Clinic — Admin JS
-   admin.js  (Full System — Interconnected Modules)
-   ============================================================ */
 'use strict';
 
-/* ── Date header + section restore after reload ──────────── */
 document.addEventListener('DOMContentLoaded', () => {
   const el = document.getElementById('dashboard-date');
   if (el) el.textContent = new Date().toLocaleDateString('en-PH', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-
-  /* Section is set server-side via ?s= param — no JS restore needed */
-
-  /* Auto-load data for the section that is already active on load */
   const initActive = document.querySelector('.admin-section.active');
   if (initActive) {
     const name = initActive.id.replace('section-', '');
@@ -19,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-/* Build URL that preserves the current section + optional extra params */
 function buildReloadUrl(extraParams) {
   const active = document.querySelector('.admin-section.active');
   const section = active ? active.id.replace('section-', '') : 'dashboard';
@@ -31,19 +21,14 @@ function buildReloadUrl(extraParams) {
   return url.toString();
 }
 
-/* Reload keeping the current tab */
 function reloadSection() {
   window.location.href = buildReloadUrl();
 }
 
-/* Change appointment date filter, stay on same tab */
 function changeViewDate(date) {
   window.location.href = buildReloadUrl({ date });
 }
 
-/* ══════════════════════════════════════════════════════════
-   SECTION SWITCHING
-══════════════════════════════════════════════════════════ */
 function showSection(name, clickedEl) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   const sec = document.getElementById('section-' + name);
@@ -60,20 +45,15 @@ function showSection(name, clickedEl) {
   if (window.innerWidth <= 768) closeSidebar();
   window.scrollTo({ top:0, behavior:'smooth' });
 
-  /* Auto-load analytics data when entering the analytics section */
   if (name === 'analytics') loadAnalytics();
 }
 
-/* Dashboard card → filtered appointments tab */
 function goToAppts(status) {
   showSection('appointments', null);
   const btn = document.querySelector(`.filter-btn[onclick="filterAppts(this,'${status}')"]`);
   if (btn) { filterAppts(btn, status); }
 }
 
-/* ══════════════════════════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════════════════════════ */
 function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   const ov = document.getElementById('sidebar-overlay');
@@ -85,9 +65,6 @@ function closeSidebar() {
   document.getElementById('sidebar-overlay')?.classList.remove('visible');
 }
 
-/* ══════════════════════════════════════════════════════════
-   TOAST
-══════════════════════════════════════════════════════════ */
 function showToast(msg, type = 'default') {
   const c = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -100,9 +77,6 @@ function showToast(msg, type = 'default') {
   setTimeout(() => { t.style.opacity='0'; t.style.transform='translateY(8px)'; t.style.transition='all .3s'; setTimeout(()=>t.remove(),320); }, 3500);
 }
 
-/* ══════════════════════════════════════════════════════════
-   APPOINTMENT MODAL — Full Medical Review
-══════════════════════════════════════════════════════════ */
 function openApptModal(id) {
   const a = APPT_DATA[id];
   if (!a) { showToast('Data not found.','error'); return; }
@@ -234,9 +208,6 @@ function renderMedicalHistory(mh) {
     </div>`;
 }
 
-/* ══════════════════════════════════════════════════════════
-   APPROVE / REJECT — from modal (includes review notes)
-══════════════════════════════════════════════════════════ */
 function getReviewNotes() {
   return document.getElementById('review-notes-input')?.value.trim() || '';
 }
@@ -263,7 +234,6 @@ function rejectApptFromModal(id) {
   });
 }
 
-/* Legacy shortcuts (still usable from other call sites) */
 function approveAppt(id) { approveApptFromModal(id); }
 function rejectAppt(id)  { rejectApptFromModal(id);  }
 
@@ -275,9 +245,6 @@ function updateApptRowStatus(id, status) {
   if (APPT_DATA[id]) APPT_DATA[id].status = status;
 }
 
-/* ══════════════════════════════════════════════════════════
-   QUEUE CONTROL
-══════════════════════════════════════════════════════════ */
 function callNext() {
   post('queue-action.php', {action:'call'}).then(d => {
     if (!d.success) { showToast(d.message||'Unable to advance queue.','error'); return; }
@@ -312,15 +279,11 @@ function reinsertSkipped(id) {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
-   APPOINTMENTS TABLE FILTER  (scoped to appointments section)
-══════════════════════════════════════════════════════════ */
 function filterAppts(btn, status) {
   document.querySelectorAll('#section-appointments .filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
   const today = new Date().toISOString().slice(0, 10);
-  /* confirmed filter also shows in_progress rows */
   const statusMap = { confirmed: ['confirmed','in_progress'] };
 
   document.querySelectorAll('#appt-table-body tr').forEach(row => {
@@ -329,7 +292,6 @@ function filterAppts(btn, status) {
 
     let show = false;
     if (status === 'today') {
-      /* "Today" tab: show all rows whose preferred_date = today */
       show = (prefDate === today);
     } else {
       show = rs === status || (statusMap[status]?.includes(rs));
@@ -345,9 +307,6 @@ function filterApptsSearch(q) {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
-   PATIENT MODAL
-══════════════════════════════════════════════════════════ */
 function openPatientModal(id) {
   const modal = document.getElementById('patient-modal');
   const body  = document.getElementById('patient-modal-body');
@@ -400,11 +359,7 @@ function closePatientModal() { document.getElementById('patient-modal').classLis
 function statusTag(s) { return {pending:'orange',confirmed:'blue',in_progress:'cyan',done:'green',rejected:'red',skipped:'yellow',disregarded:'gray'}[s]||'gray'; }
 function statusLabel(s){ return {pending:'Pending',confirmed:'Approved',in_progress:'In Progress',done:'Completed',rejected:'Rejected',skipped:'Skipped',disregarded:'Disregarded'}[s]||s; }
 
-/* ══════════════════════════════════════════════════════════
-   QUEUE FILTER  (scoped to queue section only)
-══════════════════════════════════════════════════════════ */
 function filterQueue(btn, status) {
-  /* Only touch filter buttons inside the queue section */
   document.querySelectorAll('#section-queue .filter-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   document.querySelectorAll('#queue-list .queue-list-item').forEach(item => {
@@ -413,9 +368,6 @@ function filterQueue(btn, status) {
   });
 }
 
-/* ══════════════════════════════════════════════════════════
-   PRIORITY INSERT — moves priority patient to queue front
-══════════════════════════════════════════════════════════ */
 function priorityInsert(id) {
   if (!confirm('Move this priority patient to the front of the queue?')) return;
   post('queue-action.php', { action: 'priority_insert', appointment_id: id })
@@ -426,9 +378,6 @@ function priorityInsert(id) {
     });
 }
 
-/* ══════════════════════════════════════════════════════════
-   SMS LOGS — search + sort
-══════════════════════════════════════════════════════════ */
 function filterSmsLogs(query) {
   const q = (query || '').toLowerCase().trim();
   document.querySelectorAll('#sms-log-body tr').forEach(r => {
@@ -459,10 +408,7 @@ function sortSmsLogs(mode) {
   rows.forEach(r => tbody.appendChild(r));
 }
 
-/* ══════════════════════════════════════════════════════════
-   PATIENTS — search + date filter + sort
-══════════════════════════════════════════════════════════ */
-let patientSortMode = 'surname'; /* matches the default active button */
+let patientSortMode = 'surname'; 
 
 function filterPatients() {
   const q    = (document.getElementById('patient-search')?.value || '').toLowerCase();
@@ -479,7 +425,6 @@ function filterPatients() {
 
 function sortPatients(mode) {
   patientSortMode = mode;
-  /* Scope to patients section only */
   ['sort-surname-btn','sort-queue-btn'].forEach(id => {
     document.getElementById(id)?.classList.remove('active');
   });
@@ -492,21 +437,16 @@ function sortPatients(mode) {
 
   rows.sort((a, b) => {
     if (mode === 'queue') {
-      /* Sort by most recent queue number ascending; no queue → end */
       const qa = parseInt(a.dataset.queue || '9999', 10);
       const qb = parseInt(b.dataset.queue || '9999', 10);
       return qa - qb;
     } else {
-      /* Default: A–Z by surname */
       return (a.dataset.name || '').localeCompare(b.dataset.name || '');
     }
   });
   rows.forEach(r => tbody.appendChild(r));
 }
 
-/* ══════════════════════════════════════════════════════════
-   SMS HISTORY MODAL
-══════════════════════════════════════════════════════════ */
 function openSmsHistory(mobile, name) {
   document.getElementById('sms-history-title').textContent = 'SMS History — ' + name;
   document.getElementById('sms-history-body').innerHTML =
@@ -545,9 +485,6 @@ function closeSmsHistory() {
   document.getElementById('sms-history-modal').classList.add('hidden');
 }
 
-/* ══════════════════════════════════════════════════════════
-   SMS
-══════════════════════════════════════════════════════════ */
 function saveTemplate() {
   const t = document.getElementById('sms-template')?.value || '';
   post('save-settings.php', {setting_key:'sms_template_called', setting_value:t})
@@ -577,14 +514,10 @@ function sendManualSMS() {
     });
 }
 
-/* ══════════════════════════════════════════════════════════
-   SERVICES
-══════════════════════════════════════════════════════════ */
 function openAddService() {
-  document.getElementById('svc-id').value        = '';
-  document.getElementById('svc-name').value      = '';
-  document.getElementById('svc-description').value = '';
-  document.getElementById('svc-price').value     = '';
+  document.getElementById('svc-id').value    = '';
+  document.getElementById('svc-name').value  = '';
+  document.getElementById('svc-price').value = '';
   document.getElementById('svc-modal-title').textContent = 'Add Service';
   setSvcStatus(1);
   document.getElementById('svc-status-row').style.display = '';
@@ -592,11 +525,10 @@ function openAddService() {
   setTimeout(() => document.getElementById('svc-name').focus(), 120);
 }
 
-function openEditService(id, name, price, description, active) {
-  document.getElementById('svc-id').value          = id;
-  document.getElementById('svc-name').value        = name;
-  document.getElementById('svc-description').value = description || '';
-  document.getElementById('svc-price').value       = price;
+function openEditService(id, name, price, active) {
+  document.getElementById('svc-id').value    = id;
+  document.getElementById('svc-name').value  = name;
+  document.getElementById('svc-price').value = price;
   document.getElementById('svc-modal-title').textContent = 'Edit Service';
   setSvcStatus(parseInt(active) === 1 ? 1 : 0);
   document.getElementById('svc-status-row').style.display = '';
@@ -615,12 +547,11 @@ function closeServiceModal() { document.getElementById('service-modal').classLis
 function saveService() {
   const id    = document.getElementById('svc-id').value;
   const name  = document.getElementById('svc-name').value.trim();
-  const desc  = document.getElementById('svc-description')?.value.trim() || '';
   const price = document.getElementById('svc-price').value;
   const catId = document.getElementById('svc-category')?.value;
   const active = parseInt(document.getElementById('svc-active')?.value ?? '1');
   if (!name || !price) { showToast('Service name and price are required.', 'error'); return; }
-  post('service-action.php', { action: id ? 'edit' : 'add', id, name, description: desc, price, category_id: catId, active })
+  post('service-action.php', { action: id ? 'edit' : 'add', id, name, price, category_id: catId, active })
     .then(d => {
       if (!d.success) { showToast(d.message||'Unable to save.','error'); return; }
       showToast(id?'Service updated.':'Service added.','success');
@@ -637,9 +568,6 @@ function toggleServiceActive(id, active) {
     });
 }
 
-/* ══════════════════════════════════════════════════════════
-   ANALYTICS
-══════════════════════════════════════════════════════════ */
 function setPeriod(period, btn) {
   currentAnalyticsPeriod = period;
   document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
@@ -667,19 +595,15 @@ function loadAnalytics() {
       if (!res.success) return;
       const d = res.data;
 
-      /* Helper: format income as % change */
       const fmtIncomePct = pct => (pct >= 0 ? '+' : '') + pct + '%';
       const incomeTrend  = (pct, vs) => `${pct >= 0 ? '↑' : '↓'} ${Math.abs(pct)}% vs ${vs}`;
 
-      /* ── Total Patients card ── */
       setTxt('an-total', d.total ?? '—');
 
-      /* ── Income % card — percentage only, no ₱ amount ── */
       const ip  = d.incomePct ?? 0;
       const ipStr = (ip >= 0 ? '+' : '') + ip + '%';
       setTxt('an-income', ipStr);
 
-      /* Period-specific labels */
       const pct = d.pctChange || 0;
 
       if (period==='daily') {
@@ -695,7 +619,6 @@ function loadAnalytics() {
         document.getElementById('an-vol-title').textContent = 'Monthly Volume';
         document.getElementById('an-vol-sub').textContent   = 'Daily count for ' + (d.m || '');
 
-        /* Render bar chart */
         if (d.dailyVolume) {
           const mx = Math.max(1, ...d.dailyVolume.map(x=>x.count));
           const bc = document.getElementById('analytics-bar-chart');
@@ -724,18 +647,14 @@ function loadAnalytics() {
         }
         renderTopServices(d.topServices);
       }
-      /* Appointments list for the period */
       renderAnalyticsAppointments(d.appointments || []);
 
     }).catch(()=>{});
 }
 
-/* ── Render appointments list in analytics ──────────────── */
 function renderAnalyticsAppointments(appointments) {
-  /* Cache for search filtering */
   _allAnalyticsAppts = appointments || [];
 
-  /* Clear search input */
   const searchEl = document.getElementById('an-patient-search');
   if (searchEl) searchEl.value = '';
 
@@ -751,12 +670,9 @@ function renderAnalyticsAppointments(appointments) {
   el.innerHTML = _allAnalyticsAppts.map(buildAnalyticsRow).join('');
 }
 
-/* ── Analytics appointment detail modal ─────────────────── */
 function openAnalyticsApptModal(id) {
-  /* If it's a today's appointment already in APPT_DATA, use that */
   if (APPT_DATA[id]) { openApptModal(id); return; }
 
-  /* Otherwise fetch from server */
   const modal = document.getElementById('appt-detail-modal');
   const body  = document.getElementById('appt-modal-body');
   modal.classList.remove('hidden');
@@ -766,17 +682,13 @@ function openAnalyticsApptModal(id) {
     .then(r => r.json())
     .then(d => {
       if (!d.success) { body.innerHTML = '<p style="color:#f87171;text-align:center;padding:20px;">Unable to load details.</p>'; return; }
-      /* Inject into APPT_DATA temporarily and open */
       APPT_DATA[id] = d.appointment;
       openApptModal(id);
     })
     .catch(() => { body.innerHTML = '<p style="color:#f87171;text-align:center;padding:20px;">Connection error.</p>'; });
 }
 
-/* ══════════════════════════════════════════════════════════
-   ANALYTICS PATIENT SEARCH
-══════════════════════════════════════════════════════════ */
-let _allAnalyticsAppts = []; /* cache for search filtering */
+let _allAnalyticsAppts = [];
 
 function searchAnalyticsAppts(query) {
   const q = query.toLowerCase().trim();
@@ -801,7 +713,6 @@ function searchAnalyticsAppts(query) {
   el.innerHTML = filtered.map(buildAnalyticsRow).join('');
 }
 
-/* Sort analytics appointments list */
 function sortAnalyticsAppts(mode) {
   if (!mode || !_allAnalyticsAppts.length) return;
 
@@ -822,7 +733,6 @@ function sortAnalyticsAppts(mode) {
     }
   });
 
-  /* Respect current search filter */
   const q = (document.getElementById('an-patient-search')?.value || '').toLowerCase().trim();
   const visible = q ? sorted.filter(a =>
     (a.patient_name||'').toLowerCase().includes(q) || (a.services||'').toLowerCase().includes(q)
@@ -857,9 +767,6 @@ function buildAnalyticsRow(a) {
   </div>`;
 }
 
-/* ══════════════════════════════════════════════════════════
-   APPOINTMENTS TABLE SORT
-══════════════════════════════════════════════════════════ */
 function sortApptTable(mode) {
   const tbody = document.querySelector('#appt-table-body');
   if (!tbody || !mode) return;
@@ -896,24 +803,31 @@ function renderTopServices(svcMap) {
 
 function setTxt(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
 
-/* ══════════════════════════════════════════════════════════
-   EXPORT PATIENTS CSV
-══════════════════════════════════════════════════════════ */
 function exportPatients() {
-  const rows   = Array.from(document.querySelectorAll('#patient-table tbody tr'));
-  const header = ['Name','Mobile','Sex','Age','Company','Address','Total Visits','Last Visit'];
-  const csvRows = [header.join(',')];
+  const rows    = Array.from(document.querySelectorAll('#patient-table tbody tr'));
+  const header  = ['Name','Mobile','Sex','Age','Company','Address','Total Visits','Last Visit'];
+  const csvRows = [header.map(h => `"${h}"`).join(',')];
 
   rows.forEach(r => {
-    const cells = Array.from(r.querySelectorAll('td')).map(td => {
-      /* strip html, wrap in quotes if contains comma */
-      const text = td.innerText.replace(/"/g,'""').trim();
-      return `"${text}"`;
+    const tds = Array.from(r.querySelectorAll('td')).slice(0, -1); // skip action button column
+    const cells = tds.map((td, i) => {
+      let text = (i === 0 ? r.getAttribute('data-name') : td.innerText) || '';
+      text = text.trim();
+
+      if (i === 1) {
+        let digits = text.replace(/\D/g, '');
+        if (digits.startsWith('63')) digits = digits.slice(2);
+        if (digits.startsWith('0'))  digits = digits.slice(1);
+        text = '+63' + digits;
+        return `"\t${text}"`;
+      }
+
+      return `"${text.replace(/"/g, '""')}"`;
     });
     if (cells.length) csvRows.push(cells.join(','));
   });
 
-  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+  const blob = new Blob(['﻿' + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
@@ -923,9 +837,6 @@ function exportPatients() {
   showToast('Patients exported to CSV.', 'success');
 }
 
-/* ══════════════════════════════════════════════════════════
-   LOGOUT
-══════════════════════════════════════════════════════════ */
 function adminLogout() {
   if (confirm('Sign out of admin panel?')) window.location.href='logout.php';
 }

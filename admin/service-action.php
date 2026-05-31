@@ -13,11 +13,10 @@ $input  = json_decode(file_get_contents('php://input'), true);
 $action = trim($input['action'] ?? '');
 
 if ($action === 'add') {
-    $name       = trim($input['name']        ?? '');
-    $desc       = trim($input['description'] ?? '');
-    $price      = floatval($input['price']   ?? 0);
+    $name       = trim($input['name']          ?? '');
+    $price      = floatval($input['price']     ?? 0);
     $categoryId = intval($input['category_id'] ?? 1);
-    $active     = intval($input['active']    ?? 1);
+    $active     = intval($input['active']      ?? 1);
 
     if (!$name || $price <= 0) {
         echo json_encode(['success' => false, 'message' => 'Service name and price are required.']);
@@ -25,19 +24,18 @@ if ($action === 'add') {
     }
 
     db_query(
-        'INSERT INTO services (category_id, name, description, price, duration, is_basic, active) VALUES (?, ?, ?, ?, 0, 0, ?)',
-        'issdi',
-        [$categoryId, $name, $desc ?: null, $price, $active]
+        'INSERT INTO services (category_id, name, price, duration, is_basic, active) VALUES (?, ?, ?, 0, 0, ?)',
+        'isdi',
+        [$categoryId, $name, $price, $active]
     );
     echo json_encode(['success' => true, 'id' => db_insert_id()]);
     exit;
 }
 
 if ($action === 'edit') {
-    $id    = intval($input['id']          ?? 0);
-    $name  = trim($input['name']          ?? '');
-    $desc  = trim($input['description']   ?? '');
-    $price = floatval($input['price']     ?? 0);
+    $id     = intval($input['id']      ?? 0);
+    $name   = trim($input['name']      ?? '');
+    $price  = floatval($input['price'] ?? 0);
     $active = isset($input['active']) ? intval($input['active']) : null;
 
     if ($id <= 0 || !$name || $price <= 0) {
@@ -46,9 +44,9 @@ if ($action === 'edit') {
     }
 
     if ($active !== null) {
-        db_query('UPDATE services SET name=?, description=?, price=?, active=? WHERE id=?', 'ssdii', [$name, $desc ?: null, $price, $active, $id]);
+        db_query('UPDATE services SET name=?, price=?, active=? WHERE id=?', 'sdii', [$name, $price, $active, $id]);
     } else {
-        db_query('UPDATE services SET name=?, description=?, price=? WHERE id=?', 'ssdi', [$name, $desc ?: null, $price, $id]);
+        db_query('UPDATE services SET name=?, price=? WHERE id=?', 'sdi', [$name, $price, $id]);
     }
     echo json_encode(['success' => true]);
     exit;

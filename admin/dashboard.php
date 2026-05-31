@@ -76,9 +76,7 @@ if ($rjr) while ($r = $rjr->fetch_assoc()) $queueRejected[] = $r;
 
 $queueBadgeCount = count($queueWaiting) + ($nowServing ? 1 : 0);
 
-/* ── APPOINTMENTS filtered by preferred_date (appointment date) ── */
 $allAppts = [];
-/* Sort: queue# numerically ascending (NULLs/pending at bottom), then by submission time */
 $ar = db_query(
     "SELECT a.*, p.dob, p.address AS patient_address, p.sex AS patient_sex, p.company AS patient_company
      FROM appointments a LEFT JOIN patients p ON a.patient_id=p.id
@@ -126,7 +124,7 @@ $scr = db_query('SELECT * FROM service_categories ORDER BY sort_order ASC, name 
 if ($scr) while ($r = $scr->fetch_assoc()) $serviceCategories[] = $r;
 
 $services = [];
-$svr = db_query('SELECT s.*, COALESCE(s.description,"") AS description, c.name AS category_name FROM services s JOIN service_categories c ON s.category_id=c.id ORDER BY c.sort_order ASC, s.name ASC');
+$svr = db_query('SELECT s.id, s.category_id, s.name, s.price, s.duration, s.is_basic, s.active, s.created_at, c.name AS category_name FROM services s JOIN service_categories c ON s.category_id=c.id ORDER BY c.sort_order ASC, s.name ASC');
 if ($svr) while ($r = $svr->fetch_assoc()) $services[] = $r;
 
 $basicServices = array_values(array_filter($services, fn($s) => $s['is_basic']));
@@ -608,7 +606,7 @@ foreach ($allAppts as $a) {
       </div>
       <div style="display:flex;gap:6px;">
         <button class="filter-btn active" id="sort-surname-btn" onclick="sortPatients('surname')">A–Z Name</button>
-        <button class="filter-btn" id="sort-queue-btn" onclick="sortPatients('queue')">Queue #</button>
+        <button class="filter-btn" id="sort-queue-btn" onclick="sortPatients('queue')">Queue#</button>
       </div>
     </div>
     <table class="data-table" id="patient-table">
@@ -724,13 +722,10 @@ foreach ($allAppts as $a) {
         <div class="service-admin-info">
           <div class="s-cat"><?= htmlspecialchars($svc['category_name']) ?></div>
           <div class="s-name"><?= htmlspecialchars($svc['name']) ?></div>
-          <?php if (!empty($svc['description'])): ?>
-            <div class="s-desc"><?= htmlspecialchars($svc['description']) ?></div>
-          <?php endif; ?>
           <div class="s-price">₱<?= number_format($svc['price'],0) ?></div>
         </div>
         <div class="service-admin-actions">
-          <button class="svc-edit-btn" onclick="openEditService(<?= $svc['id'] ?>,'<?= htmlspecialchars(addslashes($svc['name'])) ?>',<?= $svc['price'] ?>,'<?= htmlspecialchars(addslashes($svc['description'])) ?>',<?= $svc['active'] ?>)">
+          <button class="svc-edit-btn" onclick="openEditService(<?= $svc['id'] ?>,'<?= htmlspecialchars(addslashes($svc['name'])) ?>',<?= $svc['price'] ?>,<?= $svc['active'] ?>)">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit
           </button>
@@ -758,13 +753,10 @@ foreach ($allAppts as $a) {
             <?= htmlspecialchars($svc['name']) ?>
             <?php if (!$svc['active']): ?><span class="tag gray" style="font-size:9px;margin-left:6px;">Inactive</span><?php endif; ?>
           </div>
-          <?php if (!empty($svc['description'])): ?>
-            <div class="s-desc"><?= htmlspecialchars($svc['description']) ?></div>
-          <?php endif; ?>
           <div class="s-price">₱<?= number_format($svc['price'],0) ?></div>
         </div>
         <div class="service-admin-actions">
-          <button class="svc-edit-btn" onclick="openEditService(<?= $svc['id'] ?>,'<?= htmlspecialchars(addslashes($svc['name'])) ?>',<?= $svc['price'] ?>,'<?= htmlspecialchars(addslashes($svc['description'])) ?>',<?= $svc['active'] ?>)">
+          <button class="svc-edit-btn" onclick="openEditService(<?= $svc['id'] ?>,'<?= htmlspecialchars(addslashes($svc['name'])) ?>',<?= $svc['price'] ?>,<?= $svc['active'] ?>)">
             <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             Edit
           </button>
@@ -798,9 +790,7 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- 2 main analytics cards — filled by loadAnalytics() -->
   <div class="an-cards-row">
-    <!-- Total Patients -->
     <div class="an-card an-card-patients">
       <div class="an-card-icon">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -816,7 +806,6 @@ foreach ($allAppts as $a) {
       </div>
     </div>
 
-    <!-- Income % -->
     <div class="an-card an-card-income">
       <div class="an-card-icon">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -832,7 +821,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- Compact chart + top services side by side -->
   <div class="an-chart-row">
     <div class="chart-card an-chart-compact">
       <div class="chart-title" id="an-vol-title">Volume</div>
@@ -850,7 +838,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- Patient Search + Appointments List -->
   <div class="card" style="margin-top:18px;">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
       <div class="card-title" id="an-appts-title" style="margin-bottom:0;">
@@ -868,7 +855,7 @@ foreach ($allAppts as $a) {
                 style="width:auto;padding:8px 32px 8px 12px;font-size:12px;flex-shrink:0;"
                 onchange="sortAnalyticsAppts(this.value)">
           <option value="">Sort by…</option>
-          <option value="queue-asc">Queue # ↑</option>
+          <option value="queue-asc">Queue# ↑</option>
           <option value="name-az">Name A–Z</option>
           <option value="name-za">Name Z–A</option>
           <option value="date-asc">Date ↑</option>
@@ -883,7 +870,7 @@ foreach ($allAppts as $a) {
 </section>
 
 </main>
-</div><!-- admin-layout -->
+</div>
 
 
 <div class="modal-overlay hidden" id="appt-detail-modal" onclick="if(event.target===this)closeApptModal()">
@@ -918,24 +905,11 @@ foreach ($allAppts as $a) {
       <input type="hidden" id="svc-id"/>
       <input type="hidden" id="svc-active" value="1"/>
 
-      <!-- Service Name -->
       <div class="form-group">
         <label class="form-label">Service Name *</label>
         <input type="text" class="form-control" id="svc-name" placeholder="e.g. Complete Blood Count (CBC)"/>
       </div>
 
-      <!-- Description -->
-      <div class="form-group">
-        <label class="form-label">
-          Description
-          <span style="color:rgba(255,255,255,.35);font-weight:400;text-transform:none;margin-left:4px;">(optional)</span>
-        </label>
-        <textarea class="form-control" id="svc-description" rows="2"
-          placeholder="Brief description of this service…"
-          style="resize:none;"></textarea>
-      </div>
-
-      <!-- Price -->
       <div class="form-group">
         <label class="form-label">Price (₱) *</label>
         <div style="position:relative;">
@@ -944,7 +918,6 @@ foreach ($allAppts as $a) {
         </div>
       </div>
 
-      <!-- Category -->
       <div class="form-group">
         <label class="form-label">Category</label>
         <div class="svc-select-wrap">
@@ -957,7 +930,6 @@ foreach ($allAppts as $a) {
         </div>
       </div>
 
-      <!-- Status toggle -->
       <div class="form-group" id="svc-status-row">
         <label class="form-label">Status</label>
         <div class="svc-status-toggle">

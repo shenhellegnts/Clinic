@@ -47,7 +47,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
 </head>
 <body class="patient-portal">
 
-
 <nav class="top-nav">
   <div class="nav-brand">
     <div class="nav-logo">
@@ -91,7 +90,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
   </div>
 </nav>
 
-
 <div class="modal-overlay" id="patient-select-modal">
   <div class="modal-box">
     <div class="card-icon" style="margin-bottom:20px;">
@@ -107,12 +105,11 @@ $doneToday    = $doneToday['cnt'] ?? 0;
     <div class="modal-btn-row" style="margin-top:20px;">
       <button class="btn btn-gray btn-sm" onclick="closePatientModal(); goPatientStep(1);">Back</button>
       <button class="btn btn-primary" style="flex:1;" onclick="selectPatientAndContinue()">
-        Continue →
+        Continue
       </button>
     </div>
   </div>
 </div>
-
 
 <div class="modal-overlay booking-modal" id="booking-confirm-modal">
   <div class="modal-box">
@@ -199,7 +196,7 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             <label class="form-label">Mobile Number</label>
             <div class="phone-group">
               <div class="phone-prefix">🇵🇭 +63</div>
-              <input type="tel" class="form-control" id="mobile-input" placeholder="9XX XXX XXXX" maxlength="10" inputmode="numeric"/>
+              <input type="tel" class="form-control" id="mobile-input" placeholder="9XX XXX XXXX" maxlength="13" inputmode="numeric" oninput="formatMobileInput(this)"/>
             </div>
           </div>
           <label class="another-booking-row" id="another-booking-row" onclick="toggleBookingForOtherClick(this)">
@@ -222,7 +219,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
       </div>
     </div>
 
-
     <div class="patient-screen" id="pstep-2">
       <div class="otp-card">
         <div class="g-card">
@@ -232,7 +228,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
           <div class="step-label">Verification</div>
           <h3>Enter OTP</h3>
           <p class="desc" id="otp-sent-msg">We sent a 6-digit code to <strong id="otp-phone-display">your number</strong>. Enter it below to verify your identity.</p>
-
 
           <div class="otp-boxes">
             <input type="text" class="otp-box" maxlength="1" inputmode="numeric"/>
@@ -249,14 +244,12 @@ $doneToday    = $doneToday['cnt'] ?? 0;
       </div>
     </div>
 
-
     <div class="patient-screen" id="pstep-3">
       <div class="profile-card">
         <div class="g-card">
           <div class="step-label">Step 1 of 3 — Patient Profile</div>
           <h2>Personal Information</h2>
           <p>This information is used for accurate record preparation.</p>
-
 
           <div class="form-row-3">
             <div class="form-group">
@@ -273,7 +266,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             </div>
           </div>
 
-
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Suffix</label>
@@ -288,37 +280,31 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             <div class="form-group">
               <label class="form-label">Gender *</label>
               <select class="form-select" id="patient-sex">
-                <option value="Male" selected>Male</option>
                 <option value="Female">Female</option>
-                <option value="Other">Other</option>
+                <option value="Male">Male</option>
               </select>
             </div>
           </div>
-
 
           <div class="form-group">
             <label class="form-label">Date of Birth *</label>
             <input type="date" class="form-control" id="patient-dob"/>
           </div>
 
-
           <div class="form-group">
             <label class="form-label">Address</label>
             <input type="text" class="form-control" id="patient-address" placeholder="Street, Barangay, City"/>
           </div>
 
-
           <div class="form-group">
             <label class="form-label">Company / School <span style="opacity:.55;font-weight:400;text-transform:none;">(optional)</span></label>
-            <input type="text" class="form-control" id="patient-company" placeholder="e.g. ABC Corp, University of Santo Tomas"/>
+            <input type="text" class="form-control" id="patient-company" placeholder="e.g. ABC Corp, PUP"/>
           </div>
-
 
           <div class="form-group">
             <label class="form-label">Mobile Number <span style="position:static;transform:none;display:inline-flex;margin-left:6px;"</span></label>
             <input type="text" class="form-control" id="patient-mobile-display" readonly placeholder="+63 —"/>
           </div>
-
 
           <div class="form-group">
             <div class="priority-section-label">Priority Status</div>
@@ -347,13 +333,11 @@ $doneToday    = $doneToday['cnt'] ?? 0;
       </div>
     </div>
 
-
     <div class="patient-screen" id="pstep-4">
       <div class="medical-card">
         <div class="step-label">Step 2 of 3 — Medical History <span style="margin-left:8px;"></span></div>
         <h2>Medical History Form</h2>
         <p>Please complete all sections accurately. This information helps the clinic prepare for your appointment.</p>
-
 
         <div class="medical-section">
           <div class="medical-section-title">
@@ -378,7 +362,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
           </div>
         </div>
 
-
         <div class="medical-section">
           <div class="medical-section-title">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>
@@ -401,7 +384,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             </div>
           </div>
         </div>
-
 
         <div class="medical-section">
           <div class="medical-section-title">
@@ -477,7 +459,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
       </div>
     </div>
 
-
     <div class="patient-screen" id="pstep-5">
       <div class="step-label" style="margin-bottom:4px;">Step 3 of 3 — Choose Services</div>
       <h2 class="section-heading">Choose your services</h2>
@@ -485,7 +466,6 @@ $doneToday    = $doneToday['cnt'] ?? 0;
 
       <div class="booking-layout">
         <div class="booking-panel">
-
 
           <div class="search-bar-glass">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -501,14 +481,12 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             <div class="basic5-toggle" id="basic5-toggle"></div>
           </div>
 
-
           <div class="service-tabs">
             <button class="service-tab active" onclick="filterServices(this,'all')">All Services</button>
             <?php foreach ($serviceCategories as $category): ?>
               <button class="service-tab" onclick="filterServices(this,'<?= htmlspecialchars($category['slug']) ?>')"><?= htmlspecialchars($category['name']) ?></button>
             <?php endforeach; ?>
           </div>
-
 
           <div class="services-grid" id="services-grid">
             <?php foreach ($services as $service): ?>
@@ -527,12 +505,10 @@ $doneToday    = $doneToday['cnt'] ?? 0;
             <?php endforeach; ?>
           </div>
 
-
           <div class="form-group">
             <label class="form-label">Custom Service Request <span style="opacity:.55;font-weight:400;text-transform:none;">(optional)</span></label>
             <input type="text" class="form-control" id="custom-service" placeholder="e.g. Specialized blood panel, other test..."/>
           </div>
-
 
           <div class="form-group">
             <label class="form-label">Preferred Appointment Date *</label>

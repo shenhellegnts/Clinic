@@ -3,25 +3,21 @@ require_once __DIR__ . '/config.php';
 
 function sendSMS(string $mobile, string $message): array {
     $mobile = preg_replace('/\D+/', '', $mobile);
-    if (strlen($mobile) === 10) $mobile = '0' . $mobile;
-    if (strlen($mobile) === 12 && str_starts_with($mobile, '63')) {
-        $mobile = '0' . substr($mobile, 2);
-    }
+    if (strlen($mobile) === 10) $mobile = '63' . $mobile;
+    elseif (strlen($mobile) === 11 && str_starts_with($mobile, '0')) $mobile = '63' . substr($mobile, 1);
+    if (!str_starts_with($mobile, '+')) $mobile = '+' . $mobile;
 
-    $payload = http_build_query([
-        'apikey'     => SEMAPHORE_API_KEY,
-        'number'     => $mobile,
-        'message'    => $message,
-        'sendername' => SEMAPHORE_SENDER_NAME,
-    ]);
-
-    $ch = curl_init(SEMAPHORE_API_URL);
+    $ch = curl_init('https://skysms.skyio.site/api/v1/sms/send');
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $payload,
+        CURLOPT_POSTFIELDS     => json_encode(['phone_number' => $mobile, 'message' => $message]),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 15,
-        CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_HTTPHEADER     => [
+            'X-API-Key: ' . SKYSMS_API_KEY,
+            'Content-Type: application/json',
+        ],
     ]);
 
     $response = curl_exec($ch);
@@ -34,12 +30,16 @@ function sendSMS(string $mobile, string $message): array {
     }
 
     $decoded = json_decode($response, true);
-    if ($httpCode >= 200 && $httpCode < 300 && is_array($decoded) && !empty($decoded)) {
-        $msgId = $decoded[0]['message_id'] ?? null;
-        return ['success' => true, 'message_id' => $msgId, 'error' => null];
+    $isSuccess = $httpCode >= 200 && $httpCode < 300 && (
+        ($decoded['status'] ?? '') === 'sent' ||
+        ($decoded['success'] ?? false) === true ||
+        isset($decoded['message_id'])
+    );
+    if ($isSuccess) {
+        return ['success' => true, 'message_id' => $decoded['message_id'] ?? null, 'error' => null];
     }
 
-    $errMsg = (is_array($decoded) ? ($decoded['message'] ?? $decoded['error'] ?? '') : '') ?: $response;
+    $errMsg = $decoded['message'] ?? $decoded['error'] ?? $response;
     return ['success' => false, 'message_id' => null, 'error' => "HTTP {$httpCode}: {$errMsg}"];
 }
 
