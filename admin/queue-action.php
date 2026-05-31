@@ -22,17 +22,19 @@ if (!in_array($action, $validActions, true)) {
 }
 
 function getCurrentServing() {
-    return db_row("SELECT * FROM appointments WHERE status = 'in_progress' LIMIT 1", null, []);
+    $today = date('Y-m-d');
+    return db_row("SELECT * FROM appointments WHERE status = 'in_progress' AND DATE(preferred_date) = ? LIMIT 1", 's', [$today]);
 }
 
 function getNextConfirmed() {
+    $today = date('Y-m-d');
     return db_row(
-        "SELECT * FROM appointments WHERE status = 'confirmed'
+        "SELECT * FROM appointments WHERE status = 'confirmed' AND DATE(preferred_date) = ?
          ORDER BY
            CASE WHEN priority_flags IS NOT NULL AND priority_flags != '' THEN 0 ELSE 1 END,
-           preferred_date ASC, created_at ASC
+           created_at ASC
          LIMIT 1",
-        null, []
+        's', [$today]
     );
 }
 

@@ -29,6 +29,23 @@ function changeViewDate(date) {
   window.location.href = buildReloadUrl({ date });
 }
 
+function adminDateSafe(input, callback) {
+  if (!input.value) { if (callback) callback(); return; }
+  const date = new Date(input.value + 'T00:00:00');
+  if (date.getDay() === 0) {
+    showToast('Sundays are not available. Please select another date.', 'error');
+    const params = new URLSearchParams(window.location.search);
+    input.value = params.get('date') || new Date().toISOString().slice(0, 10);
+    return;
+  }
+  if (callback) callback();
+  else changeViewDate(input.value);
+}
+
+function changeViewDateSafe(input) {
+  adminDateSafe(input, null);
+}
+
 function showSection(name, clickedEl) {
   document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
   const sec = document.getElementById('section-' + name);

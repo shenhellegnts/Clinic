@@ -34,6 +34,14 @@ if (intval(date('H')) >= 17) {
 }
 
 function dayStat(string $where, array $params = []): int {
+    global $apptDate;
+    $q = "SELECT COUNT(*) AS c FROM appointments WHERE DATE(preferred_date)=?" . ($where ? " AND $where" : '');
+    $types = 's' . str_repeat('s', count($params));
+    $r = db_row($q, $types, array_merge([$apptDate], $params));
+    return $r['c'] ?? 0;
+}
+
+function todayStat(string $where, array $params = []): int {
     global $today;
     $q = "SELECT COUNT(*) AS c FROM appointments WHERE DATE(preferred_date)=?" . ($where ? " AND $where" : '');
     $types = 's' . str_repeat('s', count($params));
@@ -43,31 +51,40 @@ function dayStat(string $where, array $params = []): int {
 
 $stats = [
     'total'     => dayStat(''),
-    'pending'   => db_row("SELECT COUNT(*) AS c FROM appointments WHERE status='pending'", null, [])['c'] ?? 0,
+    'pending'   => dayStat("status='pending'"),
     'approved'  => dayStat("status IN ('confirmed','in_progress')"),
     'rejected'  => dayStat("status='rejected'"),
     'completed' => dayStat("status='done'"),
 ];
 
-$nowServing = db_row("SELECT * FROM appointments WHERE status='in_progress' AND DATE(created_at)=? LIMIT 1", 's', [$today]);
+$todayStats = [
+    'total'     => todayStat(''),
+    'pending'   => todayStat("status='pending'"),
+    'approved'  => todayStat("status IN ('confirmed','in_progress')"),
+    'rejected'  => todayStat("status='rejected'"),
+    'completed' => todayStat("status='done'"),
+];
+
+$nowServing = db_row("SELECT * FROM appointments WHERE status='in_progress' AND DATE(preferred_date)=? LIMIT 1", 's', [$today]);
 
 $queueWaiting = [];
-$wr = db_query("SELECT * FROM appointments WHERE status='confirmed' AND DATE(created_at)=? ORDER BY CASE WHEN priority_flags IS NOT NULL AND priority_flags!='' THEN 0 ELSE 1 END, preferred_date ASC, created_at ASC", 's', [$today]);
+$wr = db_query("SELECT * FROM appointments WHERE status='confirmed' AND DATE(preferred_date)=? ORDER BY CASE WHEN priority_flags IS NOT NULL AND priority_flags!='' THEN 0 ELSE 1 END, created_at ASC", 's', [$today]);
 if ($wr) while ($r = $wr->fetch_assoc()) $queueWaiting[] = $r;
 
 $queueSkipped = [];
-$skr = db_query("SELECT * FROM appointments WHERE status='skipped' AND DATE(created_at)=? ORDER BY created_at ASC", 's', [$today]);
+$skr = db_query("SELECT * FROM appointments WHERE status='skipped' AND DATE(preferred_date)=? ORDER BY created_at ASC", 's', [$today]);
 if ($skr) while ($r = $skr->fetch_assoc()) $queueSkipped[] = $r;
 
 $queueDone = [];
-$dr = db_query("SELECT * FROM appointments WHERE status='done' AND DATE(created_at)=? ORDER BY created_at DESC LIMIT 20", 's', [$today]);
+$dr = db_query("SELECT * FROM appointments WHERE status='done' AND DATE(preferred_date)=? ORDER BY created_at DESC LIMIT 20", 's', [$today]);
 if ($dr) while ($r = $dr->fetch_assoc()) $queueDone[] = $r;
 
 $queueRejected = [];
-$rjr = db_query("SELECT * FROM appointments WHERE status='rejected' AND DATE(created_at)=? ORDER BY created_at DESC", 's', [$today]);
+$rjr = db_query("SELECT * FROM appointments WHERE status='rejected' AND DATE(preferred_date)=? ORDER BY created_at DESC", 's', [$today]);
 if ($rjr) while ($r = $rjr->fetch_assoc()) $queueRejected[] = $r;
 
-$queueBadgeCount = count($queueWaiting) + ($nowServing ? 1 : 0);
+$queueBadgeCount  = count($queueWaiting) + ($nowServing ? 1 : 0);
+$allPendingCount  = db_row("SELECT COUNT(*) AS c FROM appointments WHERE status='pending'", null, [])['c'] ?? 0;
 
 $allAppts = [];
 $ar = db_query(
@@ -245,7 +262,7 @@ foreach ($allAppts as $a) {
     <div class="nav-item <?= $activeSection==='appointments'?'active':'' ?>" onclick="showSection('appointments',this)">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
       <span>Appointments</span>
-      <?php if ($stats['pending'] > 0): ?><span class="nav-badge"><?= $stats['pending'] ?></span><?php endif; ?>
+      <?php if ($allPendingCount > 0): ?><span class="nav-badge"><?= $allPendingCount ?></span><?php endif; ?>
     </div>
     <div class="nav-item <?= $activeSection==='patients'?'active':'' ?>" onclick="showSection('patients',this)">
       <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -295,23 +312,23 @@ foreach ($allAppts as $a) {
   <div class="stat-cards">
     <div class="stat-card" onclick="goToAppts('all')" title="View all today's appointments">
       <div class="stat-icon blue"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
-      <div><div class="stat-val"><?= $stats['total'] ?></div><div class="stat-lbl">Total Today</div></div>
+      <div><div class="stat-val"><?= $todayStats['total'] ?></div><div class="stat-lbl">Total Today</div></div>
     </div>
     <div class="stat-card" onclick="goToAppts('pending')" title="Review pending appointments">
       <div class="stat-icon orange"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg></div>
-      <div><div class="stat-val"><?= $stats['pending'] ?></div><div class="stat-lbl">Pending</div><?php if($stats['pending']>0): ?><div class="stat-trend down">⚠ Needs review</div><?php endif; ?></div>
+      <div><div class="stat-val"><?= $todayStats['pending'] ?></div><div class="stat-lbl">Pending</div><?php if($todayStats['pending']>0): ?><div class="stat-trend down">⚠ Needs review</div><?php endif; ?></div>
     </div>
     <div class="stat-card" onclick="goToAppts('confirmed')" title="View approved appointments">
       <div class="stat-icon cyan"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-      <div><div class="stat-val"><?= $stats['approved'] ?></div><div class="stat-lbl">Approved</div></div>
+      <div><div class="stat-val"><?= $todayStats['approved'] ?></div><div class="stat-lbl">Approved</div></div>
     </div>
     <div class="stat-card" onclick="goToAppts('done')" title="View completed appointments">
       <div class="stat-icon green"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
-      <div><div class="stat-val"><?= $stats['completed'] ?></div><div class="stat-lbl">Completed</div></div>
+      <div><div class="stat-val"><?= $todayStats['completed'] ?></div><div class="stat-lbl">Completed</div></div>
     </div>
     <div class="stat-card" onclick="goToAppts('rejected')" title="View rejected appointments">
       <div class="stat-icon red"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></div>
-      <div><div class="stat-val"><?= $stats['rejected'] ?></div><div class="stat-lbl">Rejected</div></div>
+      <div><div class="stat-val"><?= $todayStats['rejected'] ?></div><div class="stat-lbl">Rejected</div></div>
     </div>
   </div>
 
@@ -333,7 +350,7 @@ foreach ($allAppts as $a) {
   <div class="card mt-24">
     <div class="card-title">
       Appointments Today
-      <span style="font-weight:400;color:rgba(255,255,255,.35);margin-left:6px;">— <?= $stats['total'] ?> </span>
+      <span style="font-weight:400;color:rgba(255,255,255,.35);margin-left:6px;">— <?= $todayStats['total'] ?> </span>
       <button class="btn btn-sm btn-gray" style="margin-left:auto;" onclick="showSection('appointments',null)">View All →</button>
     </div>
     <table class="data-table">
@@ -521,7 +538,7 @@ foreach ($allAppts as $a) {
       <?php if ($isPast):   ?><span class="tag orange" style="font-size:11px;">Past date</span><?php endif; ?>
       <input type="date" class="date-input" id="appt-date-picker"
              value="<?= htmlspecialchars($apptDate) ?>"
-             onchange="changeViewDate(this.value)" title="Select any date — past or future"/>
+             onchange="changeViewDateSafe(this)" title="Select any date — past or future"/>
       <button class="btn btn-gray btn-sm" onclick="changeViewDate('<?= $today ?>')">Today</button>
     </div>
   </div>
@@ -529,7 +546,7 @@ foreach ($allAppts as $a) {
   <div class="card">
     <div class="appointment-filters">
       <button class="filter-btn active" id="appt-tab-today" onclick="filterAppts(this,'today')">Today (<?= count(array_filter($allAppts, fn($a)=>date('Y-m-d',strtotime($a['preferred_date']))===$today)) ?>)</button>
-      <button class="filter-btn" onclick="filterAppts(this,'pending')">Pending (<?= $stats['pending'] ?>)</button>
+      <button class="filter-btn" onclick="filterAppts(this,'pending')">Pending (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='pending')) ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'confirmed')">Approved (<?= count(array_filter($allAppts, fn($a)=>in_array($a['status'],['confirmed','in_progress']))) ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'done')">Completed (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='done')) ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'rejected')">Rejected (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='rejected')) ?>)</button>
@@ -581,7 +598,7 @@ foreach ($allAppts as $a) {
       </div>
       <div style="display:flex;align-items:center;gap:6px;">
         <svg width="14" height="14" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        <input type="date" class="date-input" id="patient-date-filter" onchange="filterPatients()" title="Filter by last visit date"/>
+        <input type="date" class="date-input" id="patient-date-filter" onchange="adminDateSafe(this, filterPatients)" title="Filter by last visit date"/>
       </div>
       <div style="display:flex;gap:6px;">
         <button class="filter-btn active" id="sort-surname-btn" onclick="sortPatients('surname')">A–Z Name</button>
@@ -760,7 +777,7 @@ foreach ($allAppts as $a) {
         <button class="period-btn" onclick="setPeriod('yearly',this)">Yearly</button>
       </div>
       <div class="analytics-date-row">
-        <input type="date" class="date-input" id="analytics-date" value="<?= date('Y-m-d') ?>" onchange="loadAnalytics()"/>
+        <input type="date" class="date-input" id="analytics-date" value="<?= date('Y-m-d') ?>" onchange="adminDateSafe(this, loadAnalytics)"/>
         <input type="month" class="date-input" id="analytics-month" value="<?= date('Y-m') ?>" style="display:none;" onchange="loadAnalytics()"/>
         <input type="number" class="date-input" id="analytics-year" value="<?= date('Y') ?>" min="2020" max="2030" style="display:none;width:90px;" onchange="loadAnalytics()"/>
       </div>

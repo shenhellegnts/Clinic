@@ -1,9 +1,3 @@
--- ============================================================
---  M.V. Masangkay Clinic — Complete Database Setup
---  Import this single file in phpMyAdmin to build everything.
---  No separate migration file needed.
--- ============================================================
-
 CREATE DATABASE IF NOT EXISTS `clinic_db`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
