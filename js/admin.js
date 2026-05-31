@@ -92,7 +92,7 @@ function openApptModal(id) {
   const suffix = suffixMatch ? suffixMatch[1].trim() : '—';
 
   const flagsHTML = flags.map(f => {
-    const lbl = {senior:'👴 Senior',pregnant:'🤰 Pregnant',pwd:'♿ PWD'}[f] || f;
+    const lbl = {senior:'Senior',pregnant:'Pregnant',pwd:'PWD'}[f] || f;
     return `<span class="priority-tag priority-${f}">${lbl}</span>`;
   }).join(' ');
 
@@ -100,7 +100,6 @@ function openApptModal(id) {
   const statusLbl   = {pending:'Pending',confirmed:'Approved',in_progress:'In Progress',done:'Completed',rejected:'Rejected',skipped:'Skipped'}[a.status]||a.status;
 
   document.getElementById('appt-modal-body').innerHTML = `
-    <!-- Patient header -->
     <div class="appt-modal-patient-header">
       <div class="appt-modal-avatar">${a.patient_name.charAt(0).toUpperCase()}</div>
       <div class="appt-modal-patient-info">
@@ -109,7 +108,6 @@ function openApptModal(id) {
       </div>
     </div>
 
-    <!-- I. Personal Information -->
     <div class="mh-section">
       <div class="mh-section-title">I. Personal Information</div>
       <div class="mh-info-grid">
@@ -122,7 +120,6 @@ function openApptModal(id) {
       </div>
     </div>
 
-    <!-- II. Priority Information -->
     <div class="mh-section">
       <div class="mh-section-title">II. Priority Status</div>
       <div class="mh-info-grid">
@@ -132,10 +129,8 @@ function openApptModal(id) {
       </div>
     </div>
 
-    <!-- III. Medical History -->
     ${renderMedicalHistory(mh)}
 
-    <!-- IV. Appointment Information -->
     <div class="mh-section">
       <div class="mh-section-title">IV. Appointment Information</div>
       <div class="mh-info-grid">
@@ -147,7 +142,6 @@ function openApptModal(id) {
       </div>
     </div>
 
-    <!-- V. Medical Review Notes (admin input) -->
     <div class="mh-section">
       <div class="mh-section-title">V. Medical Review Notes</div>
       ${a.review_notes ? `<div class="mh-info-item mh-full" style="margin-bottom:12px;"><span>Previous Notes</span><strong>${esc(a.review_notes)}</strong></div>` : ''}
@@ -622,9 +616,10 @@ function loadAnalytics() {
         if (d.dailyVolume) {
           const mx = Math.max(1, ...d.dailyVolume.map(x=>x.count));
           const bc = document.getElementById('analytics-bar-chart');
+          const maxBarH = Math.max(40, (bc.clientHeight || 80) - 20);
           bc.innerHTML = d.dailyVolume.filter((_,i)=>i%2===0).map(x=>`
             <div class="bar-item">
-              <div class="bar" style="height:${Math.max(6,Math.round((x.count/mx)*120))}px;"></div>
+              <div class="bar" style="height:${Math.max(6,Math.round((x.count/mx)*maxBarH))}px;"></div>
               <div class="bar-label">${x.day}</div>
             </div>`).join('');
         }
@@ -639,9 +634,10 @@ function loadAnalytics() {
         if (d.monthlyVolume) {
           const mx = Math.max(1, ...d.monthlyVolume.map(x=>x.count));
           const bc = document.getElementById('analytics-bar-chart');
+          const maxBarH = Math.max(40, (bc.clientHeight || 80) - 20);
           bc.innerHTML = d.monthlyVolume.map(x=>`
             <div class="bar-item">
-              <div class="bar" style="height:${Math.max(6,Math.round((x.count/mx)*120))}px;"></div>
+              <div class="bar" style="height:${Math.max(6,Math.round((x.count/mx)*maxBarH))}px;"></div>
               <div class="bar-label">${x.month}</div>
             </div>`).join('');
         }
@@ -750,7 +746,7 @@ function buildAnalyticsRow(a) {
   const dt  = a.preferred_date ? new Date(a.preferred_date).toLocaleDateString('en-PH', {dateStyle:'medium'}) : '—';
   const qn  = a.queue_number ? '#' + esc(a.queue_number) : '—';
   const prio = (a.priority_flags||'').split(',').filter(Boolean).map(f => {
-    const lbl = {senior:'👴',pregnant:'🤰',pwd:'♿'}[f.trim()]||f.trim();
+    const lbl = {senior:'Senior',pregnant:'Pregnant',pwd:'PWD'}[f.trim()]||f.trim();
     return `<span class="priority-tag priority-${f.trim()} sm">${lbl}</span>`;
   }).join('');
   return `<div style="display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer;transition:background .15s;"

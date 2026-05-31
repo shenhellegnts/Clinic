@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once __DIR__ . '/../db.php';
 
@@ -6,12 +6,10 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
     header('Location: login.php'); exit;
 }
 
-/* ── Active section — preserved across reloads via ?s= param ── */
 $validSections  = ['dashboard','queue','appointments','patients','sms','services','analytics'];
 $activeSection  = $_GET['s'] ?? 'dashboard';
 if (!in_array($activeSection, $validSections, true)) $activeSection = 'dashboard';
 
-/* ── Settings ──────────────────────────────────────────── */
 $settings = [];
 $sr = db_query('SELECT setting_key, setting_value FROM settings');
 if ($sr) while ($r = $sr->fetch_assoc()) $settings[$r['setting_key']] = $r['setting_value'];
@@ -24,21 +22,17 @@ $smsTplReject  = $settings['sms_template_rejected']  ?? 'Your appointment reques
 $adminName     = $_SESSION['admin_name'] ?? 'Clinic Admin';
 $adminInitial  = strtoupper(substr($adminName, 0, 1)) ?: 'A';
 
-/* ── Dates ─────────────────────────────────────────────── */
 $today = date('Y-m-d');
 
-/* Appointments tab — any date (past OR future) */
 $apptDate = $_GET['date'] ?? $today;
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $apptDate)) $apptDate = $today;
 $apptDateLabel = (new DateTime($apptDate))->format('F j, Y');
 $apptIsToday   = ($apptDate === $today);
 
-/* ── Auto-disregard skipped patients after 5 PM ─────────── */
 if (intval(date('H')) >= 17) {
     db_query("UPDATE appointments SET status='disregarded' WHERE status='skipped' AND DATE(preferred_date)=?", 's', [$today]);
 }
 
-/* ── DASHBOARD STATS — always TODAY (no date picker) ────── */
 function dayStat(string $where, array $params = []): int {
     global $today;
     $q = "SELECT COUNT(*) AS c FROM appointments WHERE DATE(preferred_date)=?" . ($where ? " AND $where" : '');
@@ -55,7 +49,6 @@ $stats = [
     'completed' => dayStat("status='done'"),
 ];
 
-/* ── QUEUE DATA (today only) ───────────────────────────── */
 $nowServing = db_row("SELECT * FROM appointments WHERE status='in_progress' AND DATE(created_at)=? LIMIT 1", 's', [$today]);
 
 $queueWaiting = [];
@@ -94,7 +87,6 @@ if ($ar) while ($r = $ar->fetch_assoc()) {
 }
 
 
-/* ── ALL PATIENTS (for patients tab) ───────────────────── */
 $patients = [];
 $pr = db_query("SELECT p.*,
     (SELECT COUNT(*) FROM appointments WHERE patient_id=p.id) AS appt_count,
@@ -103,7 +95,6 @@ $pr = db_query("SELECT p.*,
     FROM patients p ORDER BY p.name ASC LIMIT 100");
 if ($pr) while ($r = $pr->fetch_assoc()) $patients[] = $r;
 
-/* ── SMS LOGS — always TODAY (no date picker) ────────────── */
 $smsFailed    = db_row("SELECT COUNT(*) AS c FROM sms_logs WHERE status='failed'  AND DATE(created_at)=?", 's', [$today])['c'] ?? 0;
 $smsPending   = db_row("SELECT COUNT(*) AS c FROM sms_logs WHERE status='pending' AND DATE(created_at)=?", 's', [$today])['c'] ?? 0;
 $smsSentCount = db_row("SELECT COUNT(*) AS c FROM sms_logs WHERE status='sent'    AND DATE(created_at)=?", 's', [$today])['c'] ?? 0;
@@ -118,7 +109,6 @@ $slr = db_query(
 );
 if ($slr) while ($r = $slr->fetch_assoc()) $smsLogs[] = $r;
 
-/* ── SERVICES ────────────────────────────────────────────── */
 $serviceCategories = [];
 $scr = db_query('SELECT * FROM service_categories ORDER BY sort_order ASC, name ASC');
 if ($scr) while ($r = $scr->fetch_assoc()) $serviceCategories[] = $r;
@@ -130,7 +120,6 @@ if ($svr) while ($r = $svr->fetch_assoc()) $services[] = $r;
 $basicServices = array_values(array_filter($services, fn($s) => $s['is_basic']));
 $otherServices = array_values(array_filter($services, fn($s) => !$s['is_basic']));
 
-/* ── ANALYTICS (today default) ──────────────────────────── */
 $weeklyCounts = [];
 for ($i = 6; $i >= 0; $i--) {
     $d = (new DateTime())->modify("-{$i} days")->format('Y-m-d');
@@ -146,7 +135,6 @@ if ($tsRes) while ($r = $tsRes->fetch_assoc()) {
 arsort($svcMap);
 $topServices = array_slice($svcMap, 0, 5, true);
 
-/* ── HELPERS ─────────────────────────────────────────────── */
 function fdt($v){ if(!$v) return '—'; return (new DateTime($v))->format('M j, Y · g:i A'); }
 function fd($v) { if(!$v) return '—'; return (new DateTime($v))->format('M j, Y'); }
 function age($dob){ if(!$dob) return '—'; return (new DateTime($dob))->diff(new DateTime())->y; }
@@ -178,12 +166,11 @@ function statusLabel(string $s): string {
 function priorityTags(?string $flags, string $size=''): string {
     if (!$flags) return '';
     $out=''; foreach(explode(',',$flags) as $f){ $f=trim($f); if(!$f) continue;
-        $lbl = match($f){ 'senior'=>'👴 Senior','pregnant'=>'🤰 Pregnant','pwd'=>'♿ PWD',default=>ucfirst($f) };
+        $lbl = match($f){ 'senior'=>'Senior','pregnant'=>'Pregnant','pwd'=>'PWD',default=>ucfirst($f) };
         $out.='<span class="priority-tag priority-'.$f.($size?' '.$size:'').'">'.$lbl.'</span>';
     } return $out;
 }
 
-/* JS data bridge */
 $apptJS = [];
 foreach ($allAppts as $a) {
     $apptJS[(int)$a['id']] = [
@@ -217,7 +204,6 @@ foreach ($allAppts as $a) {
 </head>
 <body class="admin-glass">
 
-<!-- TOP NAV -->
 <nav class="admin-top-nav">
   <div class="admin-nav-brand">
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
@@ -239,7 +225,6 @@ foreach ($allAppts as $a) {
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <div class="admin-layout">
-<!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="sidebar-clinic-name"><?= htmlspecialchars($clinicName) ?></div>
@@ -292,7 +277,6 @@ foreach ($allAppts as $a) {
   </div>
 </aside>
 
-<!-- MAIN CONTENT -->
 <main class="admin-content">
 
 
@@ -337,7 +321,7 @@ foreach ($allAppts as $a) {
       <div class="bar-chart">
         <?php $mx=max(1,...array_column($weeklyCounts,'count')); foreach($weeklyCounts as $wc): ?>
           <div class="bar-item">
-            <div class="bar" style="height:<?= max(6, intval(($wc['count']/$mx)*120)) ?>px;opacity:<?= $wc['date']===$today?'1':'.55' ?>;"></div>
+            <div class="bar" style="height:<?= max(6, intval(($wc['count']/$mx)*100)) ?>px;opacity:<?= $wc['date']===$today?'1':'.55' ?>;"></div>
             <div class="bar-label"><?= $wc['label'] ?></div>
           </div>
         <?php endforeach; ?>
@@ -345,7 +329,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- Appointments Today -->
   <div class="card mt-24">
     <div class="card-title">
       Appointments Today
@@ -387,7 +370,6 @@ foreach ($allAppts as $a) {
 
   <div class="queue-control-layout">
     <div>
-      <!-- Now Serving -->
       <div class="now-serving-card">
         <div class="now-serving-label"><?= $nowServing ? '▶ Now Serving' : 'Queue Ready' ?></div>
         <div class="now-serving-num"><?= $nowServing ? '#'.htmlspecialchars($nowServing['queue_number']) : '—' ?></div>
@@ -407,7 +389,6 @@ foreach ($allAppts as $a) {
         </div>
       </div>
 
-      <!-- ── Waiting Queue ── -->
       <div class="card" style="margin-bottom:16px;">
         <div class="card-title">
           Waiting Queue
@@ -436,7 +417,6 @@ foreach ($allAppts as $a) {
         </div>
       </div>
 
-      <!-- ── Skipped Queue ── -->
       <?php if (!empty($queueSkipped)): ?>
       <div class="card" style="margin-bottom:16px;border-left:3px solid rgba(200,130,80,.5);">
         <div class="card-title">⏭ Skipped <span style="font-weight:400;color:rgba(255,255,255,.35);margin-left:6px;">— <?= count($queueSkipped) ?></span></div>
@@ -458,7 +438,6 @@ foreach ($allAppts as $a) {
       </div>
       <?php endif; ?>
 
-      <!-- ── Done Today ── -->
       <?php if (!empty($queueDone)): ?>
       <div class="card" style="border-left:3px solid rgba(80,160,130,.5);">
         <div class="card-title">✓ Completed Today <span style="font-weight:400;color:rgba(255,255,255,.35);margin-left:6px;">— <?= count($queueDone) ?></span></div>
@@ -479,7 +458,6 @@ foreach ($allAppts as $a) {
 
     </div>
 
-    <!-- Right: SMS Panel -->
     <div>
       <div class="card sms-template-card">
         <div class="card-title">Manual SMS</div>
@@ -594,7 +572,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
   <div class="card">
-    <!-- Filters row -->
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
       <div class="search-bar-wrap" style="flex:1;min-width:200px;margin-bottom:0;">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -650,7 +627,6 @@ foreach ($allAppts as $a) {
     <div class="sms-counter"><div class="sms-counter-icon pend-bg"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="sms-counter-val" style="color:#fb923c;"><?= $smsPending ?></div><div class="sms-counter-lbl">Pending</div></div></div>
   </div>
   <div class="card">
-    <!-- Search + Sort toolbar -->
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
       <div class="search-bar-wrap" style="flex:1;min-width:200px;margin-bottom:0;">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -707,7 +683,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- Basic 5 -->
   <div class="card svc-section-card" style="margin-bottom:18px;">
     <div class="svc-section-header">
       <div>
@@ -735,7 +710,6 @@ foreach ($allAppts as $a) {
     </div>
   </div>
 
-  <!-- Other Services -->
   <div class="card svc-section-card">
     <div class="svc-section-header">
       <span style="font-size:14px;font-weight:600;color:#fff;">Other Services</span>
@@ -944,7 +918,6 @@ foreach ($allAppts as $a) {
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="svc-modal-footer">
         <button class="svc-cancel-btn" onclick="closeServiceModal()">Cancel</button>
         <button class="svc-save-btn" onclick="saveService()">
@@ -956,7 +929,6 @@ foreach ($allAppts as $a) {
   </div>
 </div>
 
-<!-- SMS History Modal -->
 <div class="modal-overlay hidden" id="sms-history-modal" onclick="if(event.target===this)closeSmsHistory()">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">

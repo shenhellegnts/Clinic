@@ -195,7 +195,7 @@ $doneToday    = $doneToday['cnt'] ?? 0;
           <div class="form-group">
             <label class="form-label">Mobile Number</label>
             <div class="phone-group">
-              <div class="phone-prefix">🇵🇭 +63</div>
+              <div class="phone-prefix">+63</div>
               <input type="tel" class="form-control" id="mobile-input" placeholder="9XX XXX XXXX" maxlength="13" inputmode="numeric" oninput="formatMobileInput(this)"/>
             </div>
           </div>
