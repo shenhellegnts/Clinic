@@ -46,10 +46,19 @@ function sendSMS(string $mobile, string $message): array {
 function generateAndSendOTP(string $mobile): bool {
     if (session_status() === PHP_SESSION_NONE) session_start();
 
-    $otp = str_pad(random_int(0, (int)(10 ** OTP_LENGTH) - 1), OTP_LENGTH, '0', STR_PAD_LEFT);
-    $_SESSION['otp_code']    = $otp;
-    $_SESSION['otp_mobile']  = $mobile;
-    $_SESSION['otp_expires'] = time() + OTP_EXPIRY_SECONDS;
+    $mobileMatch  = !empty($_SESSION['otp_mobile']) &&
+        preg_replace('/\D+/', '', $_SESSION['otp_mobile']) === preg_replace('/\D+/', '', $mobile);
+    $notExpired   = !empty($_SESSION['otp_expires']) && $_SESSION['otp_expires'] > time();
+
+    if ($mobileMatch && !empty($_SESSION['otp_code']) && $notExpired) {
+        $otp = $_SESSION['otp_code'];
+    } else {
+        unset($_SESSION['otp_code'], $_SESSION['otp_mobile'], $_SESSION['otp_expires']);
+        $otp = str_pad(random_int(0, (int)(10 ** OTP_LENGTH) - 1), OTP_LENGTH, '0', STR_PAD_LEFT);
+        $_SESSION['otp_code']    = $otp;
+        $_SESSION['otp_mobile']  = $mobile;
+        $_SESSION['otp_expires'] = time() + OTP_EXPIRY_SECONDS;
+    }
 
     $message = "Your M.V. Masangkay Clinic verification code is: {$otp}. Valid for 5 minutes. Do not share this code.";
     $result  = sendSMS($mobile, $message);
@@ -67,7 +76,6 @@ function verifyOTP(string $mobile, string $submitted): bool {
     $codesMatch   = hash_equals($_SESSION['otp_code'], trim($submitted));
 
     if ($mobilesMatch && $codesMatch) {
-        unset($_SESSION['otp_code'], $_SESSION['otp_mobile'], $_SESSION['otp_expires']);
         return true;
     }
     return false;

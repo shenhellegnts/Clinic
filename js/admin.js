@@ -409,10 +409,10 @@ function filterPatients() {
   const date = document.getElementById('patient-date-filter')?.value || '';
 
   document.querySelectorAll('#patient-table tbody tr').forEach(r => {
-    const text = r.textContent.toLowerCase();
-    const lastVisit = r.dataset.lastVisit || '';
+    const text     = r.textContent.toLowerCase();
+    const apptDate = r.dataset.apptDate || '';
     const matchQ    = !q    || text.includes(q);
-    const matchDate = !date || lastVisit.startsWith(date);
+    const matchDate = !date || apptDate.startsWith(date);
     r.style.display = (matchQ && matchDate) ? '' : 'none';
   });
 }
@@ -497,7 +497,7 @@ function sendManualSMS() {
   if (!mobile) { showToast('Please select a patient.', 'error'); return; }
   if (!msg)    { showToast('Please enter a message.', 'error'); return; }
 
-  post('../admin/send-manual-sms.php', { mobile, message: msg, patient_name: sel.options[sel.selectedIndex]?.text || '' })
+  post('send-manual-sms.php', { mobile, message: msg, patient_name: sel.options[sel.selectedIndex]?.text || '' })
     .then(d => {
       if (d.success) {
         showToast('SMS sent successfully.', 'success');

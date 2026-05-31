@@ -512,7 +512,7 @@ $doneToday    = $doneToday['cnt'] ?? 0;
 
           <div class="form-group">
             <label class="form-label">Preferred Appointment Date *</label>
-            <input type="date" class="form-control" id="appt-datetime"/>
+            <input type="date" class="form-control" id="appt-datetime" onchange="validateAppointmentDate(this)"/>
           </div>
 
           <button class="btn btn-gray btn-sm mt-8" onclick="goPatientStep(4)">Back to Medical History</button>
@@ -679,5 +679,47 @@ $doneToday    = $doneToday['cnt'] ?? 0;
 <div id="dd-backdrop" style="position:fixed;inset:0;z-index:998;display:none;" onclick="closeDropdown()"></div>
 
 <script src="js/patient.js"></script>
+<script>
+const PH_HOLIDAYS = new Set([
+  '01-01','04-09','05-01','06-12','08-21',
+  '11-01','11-30','12-08','12-24','12-25','12-30','12-31',
+  '2025-02-12','2025-03-31','2025-04-17','2025-04-18','2025-04-19',
+  '2025-06-07','2025-08-25',
+  '2026-02-17','2026-03-20','2026-04-02','2026-04-03','2026-04-04',
+  '2026-05-27','2026-08-31',
+]);
+
+const apptInput = document.getElementById('appt-datetime');
+if (apptInput) {
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const mm    = String(today.getMonth() + 1).padStart(2, '0');
+  const dd    = String(today.getDate()).padStart(2, '0');
+  apptInput.min = `${yyyy}-${mm}-${dd}`;
+}
+
+function validateAppointmentDate(input) {
+  if (!input.value) return;
+  const date     = new Date(input.value + 'T00:00:00');
+  const today    = new Date(); today.setHours(0,0,0,0);
+  const mmdd     = input.value.slice(5);
+  const yyyymmdd = input.value;
+  if (date < today) {
+    showToast('Please select today or a future date.', 'error');
+    input.value = '';
+    return;
+  }
+  if (date.getDay() === 0) {
+    showToast('Sundays are not available for appointments.', 'error');
+    input.value = '';
+    return;
+  }
+  if (PH_HOLIDAYS.has(mmdd) || PH_HOLIDAYS.has(yyyymmdd)) {
+    showToast('This date is a Philippine holiday. Please choose another date.', 'error');
+    input.value = '';
+    return;
+  }
+}
+</script>
 </body>
 </html>

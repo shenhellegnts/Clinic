@@ -28,7 +28,7 @@ const state = {
 
 let statusPollInterval = null;
 
-function goPatientStep(n) {
+function goPatientStep(n, fromPopState = false) {
   document.querySelectorAll('.patient-screen').forEach((s, i) => {
     s.classList.toggle('active', i === n);
   });
@@ -43,7 +43,15 @@ function goPatientStep(n) {
     if (cb)    { cb.checked = false; state.bookingForOther = false; }
     if (label) label.classList.remove('checked');
   }
+  if (!fromPopState) {
+    history.pushState({ step: n }, '', '#step' + n);
+  }
 }
+
+window.addEventListener('popstate', e => {
+  const step = e.state?.step ?? 0;
+  goPatientStep(step, true);
+});
 
 function toggleDropdown() {
   const menu     = document.getElementById('dropdown-menu');
@@ -840,5 +848,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('basic5-toggle').classList.add('on');
   updateSummary();
-  goPatientStep(0);
+  history.replaceState({ step: 0 }, '', '#step0');
+  goPatientStep(0, true);
 });

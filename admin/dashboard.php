@@ -43,7 +43,7 @@ function dayStat(string $where, array $params = []): int {
 
 $stats = [
     'total'     => dayStat(''),
-    'pending'   => dayStat("status='pending'"),
+    'pending'   => db_row("SELECT COUNT(*) AS c FROM appointments WHERE status='pending'", null, [])['c'] ?? 0,
     'approved'  => dayStat("status IN ('confirmed','in_progress')"),
     'rejected'  => dayStat("status='rejected'"),
     'completed' => dayStat("status='done'"),
@@ -91,6 +91,7 @@ $patients = [];
 $pr = db_query("SELECT p.*,
     (SELECT COUNT(*) FROM appointments WHERE patient_id=p.id) AS appt_count,
     (SELECT MAX(created_at) FROM appointments WHERE patient_id=p.id) AS last_visit,
+    (SELECT MAX(preferred_date) FROM appointments WHERE patient_id=p.id) AS last_appt_date,
     (SELECT queue_number FROM appointments WHERE patient_id=p.id AND queue_number IS NOT NULL ORDER BY created_at DESC LIMIT 1) AS last_queue
     FROM patients p ORDER BY p.name ASC LIMIT 100");
 if ($pr) while ($r = $pr->fetch_assoc()) $patients[] = $r;
@@ -464,6 +465,7 @@ foreach ($allAppts as $a) {
         <div class="form-group">
           <label class="form-label">Select Patient</label>
           <select class="form-select" id="manual-sms-patient" style="background:rgba(255,255,255,.09)!important;">
+            <option value="">— Select patient —</option>
             <?php if ($nowServing): ?>
               <optgroup label="Now Serving">
                 <option value="<?= htmlspecialchars($nowServing['patient_mobile']) ?>"><?= htmlspecialchars($nowServing['patient_name'].' (#'.$nowServing['queue_number'].')') ?></option>
@@ -527,7 +529,7 @@ foreach ($allAppts as $a) {
   <div class="card">
     <div class="appointment-filters">
       <button class="filter-btn active" id="appt-tab-today" onclick="filterAppts(this,'today')">Today (<?= count(array_filter($allAppts, fn($a)=>date('Y-m-d',strtotime($a['preferred_date']))===$today)) ?>)</button>
-      <button class="filter-btn" onclick="filterAppts(this,'pending')">Pending (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='pending')) ?>)</button>
+      <button class="filter-btn" onclick="filterAppts(this,'pending')">Pending (<?= $stats['pending'] ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'confirmed')">Approved (<?= count(array_filter($allAppts, fn($a)=>in_array($a['status'],['confirmed','in_progress']))) ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'done')">Completed (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='done')) ?>)</button>
       <button class="filter-btn" onclick="filterAppts(this,'rejected')">Rejected (<?= count(array_filter($allAppts, fn($a)=>$a['status']==='rejected')) ?>)</button>
@@ -593,6 +595,7 @@ foreach ($allAppts as $a) {
         <tr data-name="<?= htmlspecialchars($p['name']) ?>"
             data-visits="<?= (int)$p['appt_count'] ?>"
             data-last-visit="<?= htmlspecialchars($p['last_visit'] ?? '') ?>"
+            data-appt-date="<?= htmlspecialchars($p['last_appt_date'] ? date('Y-m-d', strtotime($p['last_appt_date'])) : '') ?>"
             data-queue="<?= htmlspecialchars($p['last_queue'] ?? '999') ?>">
           <td><div class="patient-name-cell"><div class="patient-dot"><?= strtoupper(substr($p['name'],0,1)) ?></div><?= htmlspecialchars($p['name']) ?></div></td>
           <td style="color:rgba(255,255,255,.55);font-size:12px;"><?= htmlspecialchars($p['mobile']) ?></td>

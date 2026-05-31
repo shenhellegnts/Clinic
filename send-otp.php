@@ -17,16 +17,8 @@ if (strlen($mobile) !== 10) {
 
 $fullMobile = '+63' . $mobile;
 
-$lockKey = 'otp_sent_at_' . $mobile;
-if (!empty($_SESSION[$lockKey]) && (time() - $_SESSION[$lockKey]) < 60) {
-    $wait = 60 - (time() - $_SESSION[$lockKey]);
-    echo json_encode(['success' => false, 'message' => "Please wait {$wait}s before requesting a new code."]);
-    exit;
-}
-
 $sent = generateAndSendOTP($fullMobile);
 if ($sent) {
-    $_SESSION[$lockKey] = time();
     echo json_encode(['success' => true, 'mobile' => $fullMobile]);
 } else {
     http_response_code(500);
