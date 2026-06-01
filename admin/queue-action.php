@@ -93,22 +93,25 @@ if ($action === 'done') {
 }
 
 if ($action === 'skip') {
-    $current = getCurrentServing();
-    if (!$current) {
-        $targetId = intval($input['appointment_id'] ?? 0);
-        if ($targetId > 0) {
-            db_query(
-                "UPDATE appointments SET status = 'skipped' WHERE id = ? AND status = 'confirmed'",
-                'i', [$targetId]
-            );
-            echo json_encode(['success' => true]);
-            exit;
-        }
-        echo json_encode(['success' => false, 'message' => 'No patient currently in service.']);
+    $targetId = intval($input['appointment_id'] ?? 0);
+    $current  = getCurrentServing();
+
+    if ($current) {
+        db_query("UPDATE appointments SET status='skipped' WHERE id=?", 'i', [$current['id']]);
+        echo json_encode(['success' => true]);
         exit;
     }
-    db_query("UPDATE appointments SET status = 'skipped' WHERE id = ?", 'i', [$current['id']]);
-    echo json_encode(['success' => true]);
+
+    if ($targetId > 0) {
+        db_query(
+            "UPDATE appointments SET status='skipped' WHERE id=? AND status IN ('confirmed','in_progress')",
+            'i', [$targetId]
+        );
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    echo json_encode(['success' => false, 'message' => 'No patient to skip.']);
     exit;
 }
 
