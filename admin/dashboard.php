@@ -84,7 +84,7 @@ $rjr = db_query("SELECT * FROM appointments WHERE status='rejected' AND DATE(pre
 if ($rjr) while ($r = $rjr->fetch_assoc()) $queueRejected[] = $r;
 
 $queueBadgeCount  = count($queueWaiting) + ($nowServing ? 1 : 0);
-$allPendingCount  = db_row("SELECT COUNT(*) AS c FROM appointments WHERE status='pending' AND DATE(preferred_date)=?", 's', [$today])['c'] ?? 0;
+$allPendingCount  = $stats['pending'];
 
 $allAppts = [];
 $ar = db_query(
