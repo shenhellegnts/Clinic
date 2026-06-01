@@ -580,6 +580,7 @@ function submitBookingConfirmed() {
   const preferredDate = document.getElementById('appt-datetime').value;
   const bookingData = {
     mobile:          state.mobile.replace('+63', ''),
+    patient_id:      state.selectedExistingPatient?.id || 0,
     name:            state.patient.name,
     dob:             state.patient.dob,
     sex:             state.patient.sex,

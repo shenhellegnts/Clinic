@@ -49,14 +49,25 @@ $priorityFlags = implode(',', array_filter(array_map(
 $medicalHistoryRaw  = $input['medical_history'] ?? null;
 $medicalHistoryJson = $medicalHistoryRaw ? json_encode($medicalHistoryRaw) : null;
 
-$patient = db_row('SELECT id FROM patients WHERE mobile = ? LIMIT 1', 's', [$mobile]);
-if ($patient) {
-    db_query(
-        'UPDATE patients SET name = ?, dob = ?, sex = ?, company = ?, address = ? WHERE id = ?',
-        'sssssi',
-        [$name, $dob, $sex, $company, $address, $patient['id']]
-    );
-    $patientId = $patient['id'];
+$selectedPatientId = intval($input['patient_id'] ?? 0);
+
+if ($selectedPatientId > 0) {
+    $patient = db_row('SELECT id FROM patients WHERE id = ? AND mobile = ? LIMIT 1', 'is', [$selectedPatientId, $mobile]);
+    if ($patient) {
+        db_query(
+            'UPDATE patients SET name = ?, dob = ?, sex = ?, company = ?, address = ? WHERE id = ?',
+            'sssssi',
+            [$name, $dob, $sex, $company, $address, $patient['id']]
+        );
+        $patientId = $patient['id'];
+    } else {
+        db_query(
+            'INSERT INTO patients (name, mobile, dob, sex, company, address) VALUES (?, ?, ?, ?, ?, ?)',
+            'ssssss',
+            [$name, $mobile, $dob, $sex, $company, $address]
+        );
+        $patientId = db_insert_id();
+    }
 } else {
     db_query(
         'INSERT INTO patients (name, mobile, dob, sex, company, address) VALUES (?, ?, ?, ?, ?, ?)',
